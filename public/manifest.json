@@ -1,0 +1,59 @@
+{
+  "name": "TellBrandz - The Digital Bureau for Real Accountability",
+  "short_name": "TellBrandz",
+  "description": "Share your experiences, hold brands accountable, and help others make informed decisions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#facc15",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757130651584_a48b5b2e.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757130651584_a48b5b2e.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757130651584_a48b5b2e.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["business", "social", "productivity"],
+  "screenshots": [
+    {
+      "src": "https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1755699208518_1efcae61.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "TellBrandz main interface"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tell Your Story",
+      "short_name": "Tell Story",
+      "description": "Share your brand experience",
+      "url": "/?action=tell",
+      "icons": [
+        {
+          "src": "https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757130651584_a48b5b2e.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}
