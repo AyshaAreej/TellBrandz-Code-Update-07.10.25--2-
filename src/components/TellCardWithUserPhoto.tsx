@@ -624,109 +624,115 @@ export default function TellCardWithUserPhoto({
         )}
 
       {/* Comment Popup */}
-      {isCommentPopupOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg max-w-sm w-full">
-            <h2 className="text-xl font-semibold mb-4">Submit Your Comment</h2>
-            <textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              rows={4}
-              className="w-full p-2 border border-gray-300 rounded-md mb-4"
-              placeholder="Write your comment here..."
-            />
-            <div className="flex justify-end">
-              <button
-                onClick={handleCommentSubmit}
-                className="bg-yellow-400 text-black hover:bg-yellow-500 font-semibold px-4 py-2 rounded"
-              >
-                Submit
-              </button>
-              <button
-                onClick={() => setIsCommentPopupOpen(false)}
-                className="ml-2 bg-gray-300 text-black hover:bg-gray-400 font-semibold px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
+      {isCommentPopupOpen &&
+        createPortal(
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-lg max-w-sm w-full">
+              <h2 className="text-xl font-semibold mb-4">
+                Submit Your Comment
+              </h2>
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                rows={4}
+                className="w-full p-2 border border-gray-300 rounded-md mb-4"
+                placeholder="Write your comment here..."
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCommentSubmit}
+                  className="bg-yellow-400 text-black hover:bg-yellow-500 font-semibold px-4 py-2 rounded"
+                >
+                  Submit
+                </button>
+                <button
+                  onClick={() => setIsCommentPopupOpen(false)}
+                  className="ml-2 bg-gray-300 text-black hover:bg-gray-400 font-semibold px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Read Comments Popup */}
-      {isReadCommentsOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold">
-                Comments ({commentsCount})
-              </h2>
-              <button
-                onClick={() => setIsReadCommentsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+      {isReadCommentsOpen &&
+        createPortal(
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-semibold">
+                  Comments ({commentsCount})
+                </h2>
+                <button
+                  onClick={() => setIsReadCommentsOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
 
-            {/* Comments List */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {comments.length > 0 ? (
-                <div className="space-y-4">
-                  {comments.map((comment) => (
-                    <div
-                      key={comment.id}
-                      className="border-b border-gray-100 pb-4 last:border-b-0"
-                    >
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                            {comment.user_name?.charAt(0) || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm text-gray-900">
-                              {comment.user_name}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {formatCommentDate(comment.created_at)}
-                            </span>
+              {/* Comments List */}
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                {comments.length > 0 ? (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="border-b border-gray-100 pb-4 last:border-b-0"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                              {comment.user_name?.charAt(0) || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm text-gray-900">
+                                {comment.user_name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {formatCommentDate(comment.created_at)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              {comment.content}
+                            </p>
                           </div>
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {comment.content}
-                          </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">
-                    No comments yet. Be the first to comment!
-                  </p>
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      No comments yet. Be the first to comment!
+                    </p>
+                  </div>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="p-6 border-t bg-gray-50">
-              <button
-                onClick={() => {
-                  setIsReadCommentsOpen(false);
-                  setIsCommentPopupOpen(true);
-                }}
-                className="w-full bg-yellow-400 text-black hover:bg-yellow-500 font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                Add a Comment
-              </button>
+              {/* Footer */}
+              <div className="p-6 border-t bg-gray-50">
+                <button
+                  onClick={() => {
+                    setIsReadCommentsOpen(false);
+                    setIsCommentPopupOpen(true);
+                  }}
+                  className="w-full bg-yellow-400 text-black hover:bg-yellow-500 font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                  Add a Comment
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Success Notification */}
       <SuccessNotification

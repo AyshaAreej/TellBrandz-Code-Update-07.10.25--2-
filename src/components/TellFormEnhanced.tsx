@@ -277,6 +277,23 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                     required
                   />
                 </div>
+                <div>
+                 <Label>Location</Label>
+                    <div className="flex items-center space-x-3">
+                      <Input
+                        value={location}
+                        readOnly
+                        placeholder="Click button to detect your location"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={requestLocation}
+                      >
+                        Get My Location
+                      </Button>
+                    </div>
+                    </div>
 
                 <div>
                   <Label htmlFor="description">Description</Label>
@@ -291,25 +308,8 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                     required
                   />
                 </div>
-
                 <div>
-                  <div>
-                    <Label>Location</Label>
-                    <div className="flex items-center space-x-3 mt-2 mb-2">
-                      <Input
-                        value={location}
-                        readOnly
-                        placeholder="Click button to detect your location"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={requestLocation}
-                      >
-                        Get My Location
-                      </Button>
-                    </div>
-                  </div>
+                   
 
                   <Label>Upload Images & Videos (Optional)</Label>
                   <div className="mt-2 space-y-4">
