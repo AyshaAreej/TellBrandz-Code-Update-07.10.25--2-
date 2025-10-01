@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { FunctionsHttpError, type User } from "@supabase/supabase-js";
 
 interface ExtendedUser extends User {
   brand_id?: string;
@@ -14,7 +14,7 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Check for demo user in localStorage first
-    const demoUser = localStorage.getItem('demo_user');
+    const demoUser = localStorage.getItem("demo_user");
     if (demoUser) {
       try {
         const parsedUser = JSON.parse(demoUser);
@@ -22,105 +22,123 @@ export const useAuth = () => {
         setLoading(false);
         return;
       } catch (e) {
-        localStorage.removeItem('demo_user');
+        localStorage.removeItem("demo_user");
       }
     }
 
     // Get initial session from Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }).catch(() => {
-      // If Supabase fails, just set loading to false
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
         setUser(session?.user ?? null);
         setLoading(false);
-      }
-    );
+      })
+      .catch(() => {
+        // If Supabase fails, just set loading to false
+        setLoading(false);
+      });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      console.log('Attempting signup with:', { email, fullName });
-      
+      console.log("Attempting signup with:", { email, fullName });
+
       // Use custom verification service instead of Supabase's built-in email
-      const { data, error } = await supabase.functions.invoke('custom-auth-verification', {
-        body: {
-          action: 'signup',
-          email,
-          password,
-          fullName
+      const { data, error } = await supabase.functions.invoke(
+        "custom-auth-verification",
+        {
+          body: {
+            action: "signup",
+            email,
+            password,
+            fullName,
+          },
         }
-      });
-      
+      );
+
       if (error) {
-        console.error('Custom signup error:', error);
-        throw new Error(error.message || 'Signup failed. Please try again.');
+        // Supabase error wrapper (non-2xx)
+        if (error instanceof FunctionsHttpError) {
+          const errorBody = await error.context.json().catch(() => null);
+          console.error("Edge function error body:", errorBody);
+          throw new Error(
+            errorBody?.error || "Signup failed. Please try again."
+          );
+        }
+
+        throw error;
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Signup failed. Please try again.');
+      if (data.success === false) {
+        throw new Error(data.error || "Signup failed. Please try again.");
       }
-      
-      console.log('Custom signup successful:', data);
-      
-      return { 
-        user: null, 
-        session: null, 
+
+      console.log("Custom signup successful:", data);
+
+      return {
+        user: null,
+        session: null,
         needsConfirmation: true,
-        message: data.message
+        message: data.message,
       };
     } catch (err: any) {
-      console.error('Signup catch block:', err);
-      throw new Error(err.message || 'Network error. Please check your connection and try again.');
+      console.error("Signup catch block:", err);
+      throw new Error(
+        err.message ||
+          "Network error. Please check your connection and try again."
+      );
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting signin with:', { email });
-      
+      console.log("Attempting signin with:", { email });
+
       // Check if we're using demo credentials
-      const isDemoMode = supabase.supabaseUrl?.includes('demo') || 
-                        supabase.supabaseUrl?.includes('localhost') ||
-                        !supabase.supabaseUrl?.includes('supabase.co');
+      const isDemoMode =
+        supabase.supabaseUrl?.includes("demo") ||
+        supabase.supabaseUrl?.includes("localhost") ||
+        !supabase.supabaseUrl?.includes("supabase.co");
       // Real Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) {
-        console.error('Signin error:', error);
-        throw new Error(error.message || 'Sign in failed');
+        console.error("Signin error:", error);
+        throw new Error(error.message || "Sign in failed");
       }
 
-      console.log('Signin successful:', data);
+      console.log("Signin successful:", data);
       return data;
     } catch (err: any) {
-      console.error('Signin catch block:', err);
+      console.error("Signin catch block:", err);
       throw err;
     }
   };
 
   const signOut = async () => {
     // Clear demo user from localStorage
-    localStorage.removeItem('demo_user');
+    localStorage.removeItem("demo_user");
     setUser(null);
-    
+
     // Also try to sign out from Supabase if connected
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) console.warn('Supabase signout warning:', error);
+      if (error) console.warn("Supabase signout warning:", error);
     } catch (e) {
-      console.warn('Supabase signout failed:', e);
+      console.warn("Supabase signout failed:", e);
     }
   };
 

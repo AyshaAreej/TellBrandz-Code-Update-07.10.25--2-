@@ -43,6 +43,7 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
     brand_name: "",
   });
   const [location, setLocation] = useState<string>("");
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   const uploadFile = async (file: File, mediaId: string) => {
     try {
@@ -81,6 +82,8 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
       return;
     }
 
+    setLoadingLocation(true);
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -95,9 +98,9 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
           if (error) throw error;
 
           if (data?.city && data?.country) {
-            const locationString = `${data.city}, ${data.country}`;
+            const locationString = `${data.country}, ${data.countryCode}`;
             setLocation(locationString);
-            setCountry(data.country);
+            setCountry(data.countryCode);
             console.log(
               "Location set:",
               locationString,
@@ -106,17 +109,20 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
             );
           } else {
             setLocation("Unknown Location");
-            setCountry("US"); // fallback
+            setCountry("US");
           }
         } catch (err) {
           console.error("Error resolving location:", err);
           setLocation("Unknown Location");
-          setCountry("US"); // fallback
+          setCountry("US");
+        } finally {
+          setLoadingLocation(false);
         }
       },
       (err) => {
         console.error("Geolocation error:", err);
-        alert("Unable to fetch location. Please allow location access.");
+        // alert("Unable to fetch location. Please allow location access.");
+        setLoadingLocation(false);
       }
     );
   };
@@ -158,6 +164,12 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    if (!location || location === "Unknown Location") {
+    alert("Please allow location access to continue.");
+    setLoading(false);
+    return;
+  }
+
 
     try {
       const uploadedUrls = mediaFiles
@@ -278,22 +290,15 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                   />
                 </div>
                 <div>
-                 <Label>Location</Label>
-                    <div className="flex items-center space-x-3">
-                      <Input
-                        value={location}
-                        readOnly
-                        placeholder="Click button to detect your location"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={requestLocation}
-                      >
-                        Get My Location
-                      </Button>
-                    </div>
-                    </div>
+                  <Label>Location</Label>
+                  <Input
+                    value={loadingLocation ? "Detecting location..." : location}
+                    readOnly
+                     required
+                    placeholder="Tap to detect your location"
+                    onFocus={requestLocation}
+                  />
+                </div>
 
                 <div>
                   <Label htmlFor="description">Description</Label>
@@ -309,8 +314,6 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                   />
                 </div>
                 <div>
-                   
-
                   <Label>Upload Images & Videos (Optional)</Label>
                   <div className="mt-2 space-y-4">
                     {/* Upload Area */}
