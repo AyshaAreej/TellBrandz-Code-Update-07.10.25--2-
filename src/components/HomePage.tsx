@@ -32,6 +32,7 @@ import DynamicHeroBanner from "./DynamicHeroBanner";
 import { useLocation } from "@/hooks/useLocation";
 import { supabase } from "@/lib/supabase";
 import { BrandLogoFetcher } from "./BrandLogoFetcher";
+import { createSlug } from "@/lib/utils";
 
 // Interface for Tell data
 interface Tell {
@@ -443,9 +444,7 @@ const HomePage: React.FC<HomePageProps> = ({
                       {filteredBrands.slice(0, 5).map((brand) => (
                         <Link
                           key={brand.id}
-                          to={`/brand/${brand.name
-                            .toLowerCase()
-                            .replace(/\s+/g, "-")}`}
+                            to={`/brand/${createSlug(brand.name)}`}
                           className="block p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                         >
                           <div className="flex items-center space-x-3">
