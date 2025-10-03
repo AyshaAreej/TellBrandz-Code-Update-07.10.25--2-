@@ -91,7 +91,7 @@ export const useAuth = () => {
         needsConfirmation: true,
         message: data.message,
       };
-    } catch (err: any) {
+    } catch (err) {
       console.error("Signup catch block:", err);
       throw new Error(
         err.message ||
@@ -105,11 +105,7 @@ export const useAuth = () => {
       console.log("Attempting signin with:", { email });
 
       // Check if we're using demo credentials
-      const isDemoMode =
-        supabase.supabaseUrl?.includes("demo") ||
-        supabase.supabaseUrl?.includes("localhost") ||
-        !supabase.supabaseUrl?.includes("supabase.co");
-      // Real Supabase authentication
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -122,7 +118,7 @@ export const useAuth = () => {
 
       console.log("Signin successful:", data);
       return data;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Signin catch block:", err);
       throw err;
     }

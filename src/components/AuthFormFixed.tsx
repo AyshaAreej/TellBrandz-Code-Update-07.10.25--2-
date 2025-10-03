@@ -111,34 +111,41 @@ const AuthFormFixed: React.FC<AuthFormFixedProps> = ({ onBack, showHeader = true
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-      
-      if (error) throw error;
-      
-      setSuccess('Password reset link has been sent to your email!');
-      setForgotPasswordEmail('');
-      
-      // Go back to login after 3 seconds
-      setTimeout(() => {
-        setShowForgotPassword(false);
-        setSuccess(null);
-      }, 3000);
-    } catch (error) {
-      console.error('Password reset failed:', error);
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
+ const handleForgotPassword = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setSuccess(null);
+
+  try {
+    // Call your custom edge function
+    const { data, error } = await supabase.functions.invoke('custom-auth-verification', {
+      body: {
+        action: 'forgot-password',
+        email: forgotPasswordEmail
+      }
+    });
+
+    if (error || !data.success) {
+      throw new Error(data?.error || error?.message || 'Failed to send reset link');
     }
-  };
+
+    setSuccess('Password reset link has been sent to your email!');
+    setForgotPasswordEmail('');
+
+    // Hide forgot password form after few seconds
+    setTimeout(() => {
+      setShowForgotPassword(false);
+      setSuccess(null);
+    }, 3000);
+  } catch (err: any) {
+    console.error('Password reset failed:', err);
+    setError(err.message || 'Something went wrong while resetting password');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (showEmailVerification) {
     if (!showHeader) {

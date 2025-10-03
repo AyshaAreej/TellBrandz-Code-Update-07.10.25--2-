@@ -14,46 +14,50 @@ const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string | boolean>(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+ const handleResetPassword = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setSuccess(null);
+
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (!token) {
+      throw new Error('Reset token missing from URL');
+    }
+
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+      throw new Error('Passwords do not match');
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
+    const { data, error } = await supabase.functions.invoke('custom-auth-verification', {
+      body: {
+        action: 'reset-password',
+        token,
+        newPassword: password
+      }
+    });
+
+    if (error || !data.success) {
+      throw new Error(data?.error || error?.message || 'Failed to reset password');
     }
 
-    setLoading(true);
-    setError(null);
+    setSuccess('Password updated successfully! Redirecting to login...');
+    setTimeout(() => navigate('/auth?mode=login', { replace: true }), 2000);
+  } catch (err) {
+    console.error('Reset password error:', err);
+    setError(err.message || 'Something went wrong resetting password');
+  } finally {
+    setLoading(false);
+  }
+};
 
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) throw error;
-
-      setSuccess(true);
-      
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        navigate('/auth?mode=login');
-      }, 2000);
-    } catch (error) {
-      console.error('Password reset failed:', error);
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
