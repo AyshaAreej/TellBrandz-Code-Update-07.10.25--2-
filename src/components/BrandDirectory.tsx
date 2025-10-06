@@ -537,13 +537,13 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
                       >
                         <div className="flex items-center gap-2 mb-2 sm:mb-3">
                           <div className="flex items-center">
-                            <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
+                            {/* <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" /> */}
                             <span className="ml-1 text-xs sm:text-sm font-medium">
-                              {brand.rating}
+                              {/* {brand.rating} */}
                             </span>
                           </div>
                           <span className="text-xs sm:text-sm text-gray-500">
-                            ({brand.reviews} reviews)
+                            {/* ({brand.reviews} reviews) */}
                           </span>
                         </div>
                         {viewMode === "list" && (
