@@ -43,7 +43,7 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
             brand_name,image_url,evidence_urls
           `)
           .order('created_at', { ascending: false })
-          .limit(20);
+          .limit(2000);
 
         if (selectedCountry && selectedCountry !== 'GLOBAL') {
           tellsQuery = tellsQuery.eq('country', selectedCountry);
