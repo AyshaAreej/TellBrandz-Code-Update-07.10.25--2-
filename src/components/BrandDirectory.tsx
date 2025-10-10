@@ -32,6 +32,7 @@ import { createSlug } from "@/lib/utils";
 interface BrandDirectoryProps {
   showHeader?: boolean;
 }
+
 const BrandDirectory: React.FC<BrandDirectoryProps> = ({
   showHeader = true,
 }) => {
@@ -99,8 +100,11 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
           const brandName = tell.brand_name;
           if (!brandName) return;
 
-          if (!brandStats[brandName]) {
-            brandStats[brandName] = {
+          // Normalize brand name to handle duplicates
+          const normalizedName = brandName.toLowerCase().trim();
+
+          if (!brandStats[normalizedName]) {
+            brandStats[normalizedName] = {
               brandBlasts: 0,
               brandBeats: 0,
               totalTells: 0,
@@ -111,102 +115,112 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
             };
           }
 
-          brandStats[brandName].totalTells += 1;
+          brandStats[normalizedName].totalTells += 1;
 
           if (tell.tell_type === "BrandBlast") {
-            brandStats[brandName].brandBlasts++;
+            brandStats[normalizedName].brandBlasts++;
           } else if (tell.tell_type === "BrandBeat") {
-            brandStats[brandName].brandBeats++;
+            brandStats[normalizedName].brandBeats++;
           }
 
           // Count comments (reviews) for this tell
           const tellComments = (commentsData || []).filter(
             (comment) => comment.tell_id === tell.id
           );
-          brandStats[brandName].totalComments += tellComments.length;
+          brandStats[normalizedName].totalComments += tellComments.length;
 
           // Count likes for this tell
           const tellLikes = (likesData || []).filter(
             (like) => like.tell_id === tell.id
           );
-          brandStats[brandName].totalLikes += tellLikes.length;
+          brandStats[normalizedName].totalLikes += tellLikes.length;
         });
 
         // Calculate likes per tell for each brand (this becomes our rating metric)
-        Object.keys(brandStats).forEach((brandName) => {
-          const stats = brandStats[brandName];
+        Object.keys(brandStats).forEach((normalizedName) => {
+          const stats = brandStats[normalizedName];
           if (stats.totalTells > 0) {
             stats.likesPerTell = stats.totalLikes / stats.totalTells;
           }
         });
 
         // Calculate satisfaction scores and create final brand array
-        const brandsWithStats = Object.keys(brandStats)
-          .map((brandName, i) => {
-            const stats = brandStats[brandName];
-            const brandData = brandsData?.find(
-              (b) => b.name.toLowerCase() === brandName.toLowerCase()
-            );
+        // Use a Map to ensure unique brands by normalized name
+        const uniqueBrandsMap = new Map();
 
-            // Calculate satisfaction score based on BrandBlasts vs BrandBeats ratio
-            let satisfactionScore = 50; // Default neutral
-            if (stats.totalTells > 0) {
-              const blastPercentage =
-                (stats.brandBlasts / stats.totalTells) * 100;
-              satisfactionScore = Math.round(blastPercentage);
-            }
+        Object.keys(brandStats).forEach((normalizedName) => {
+          // Skip if we already have this brand
+          if (uniqueBrandsMap.has(normalizedName)) {
+            return;
+          }
 
-            // Generate a rating if we don't have comment ratings, based on satisfaction
-            let finalRating = 0;
-            if (finalRating === 0 && stats.totalTells > 0) {
-              // Generate rating based on satisfaction score
-              finalRating =
-                Math.round((satisfactionScore / 100) * 4 + 1 * 10) / 10;
-            }
+          const stats = brandStats[normalizedName];
+          const brandData = brandsData?.find(
+            (b) => b.name.toLowerCase().trim() === normalizedName
+          );
 
-            return {
-              id: brandData?.id || `brand-${i}`,
-              name: brandName,
-              logo: brandData?.logo_url
-                ? `<img src="${brandData.logo_url}" alt="${brandName}" class="w-8 h-8 object-contain" />`
-                : "🏢",
-              category: brandData?.category || "General",
-              location: brandData?.location || "Not specified",
-              established: brandData?.established || "N/A",
+          // Calculate satisfaction score based on BrandBlasts vs BrandBeats ratio
+          let satisfactionScore = 50; // Default neutral
+          if (stats.totalTells > 0) {
+            const blastPercentage =
+              (stats.brandBlasts / stats.totalTells) * 100;
+            satisfactionScore = Math.round(blastPercentage);
+          }
 
-              // Tell statistics
-              tellsCount: stats.totalTells,
-              brandblastsCount: stats.brandBlasts,
-              brandbeatsCount: stats.brandBeats,
+          // Generate a rating if we don't have comment ratings, based on satisfaction
+          let finalRating = 0;
+          if (finalRating === 0 && stats.totalTells > 0) {
+            // Generate rating based on satisfaction score
+            finalRating =
+              Math.round((satisfactionScore / 100) * 4 + 1 * 10) / 10;
+          }
 
-              // Engagement statistics
-              reviews: stats.totalComments, // Comments are reviews
-              likes: stats.totalLikes,
-              rating: Math.round(finalRating * 10) / 10, // Round to 1 decimal
-              satisfaction: satisfactionScore,
+          uniqueBrandsMap.set(normalizedName, {
+            id: brandData?.id || `brand-${normalizedName}`,
+            name: brandData?.name || normalizedName, // Use official name from brands table or normalized
+            logo: brandData?.logo_url
+              ? `<img src="${brandData.logo_url}" alt="${brandData.name || normalizedName}" class="w-8 h-8 object-contain" />`
+              : "🏢",
+            category: brandData?.category || "General",
+            location: brandData?.location || "Not specified",
+            established: brandData?.established || "N/A",
 
-              // Derived metrics
-              engagementScore: stats.totalComments + stats.totalLikes,
-              type:
-                stats.brandBlasts > stats.brandBeats
-                  ? "Mostly Positive"
-                  : stats.brandBeats > stats.brandBlasts
-                  ? "Mixed Reviews"
-                  : "Balanced",
+            // Tell statistics
+            tellsCount: stats.totalTells,
+            brandblastsCount: stats.brandBlasts,
+            brandbeatsCount: stats.brandBeats,
 
-              // Trend indicator
-              trend:
-                stats.brandBlasts > stats.brandBeats
-                  ? "up"
-                  : stats.brandBeats > stats.brandBlasts
-                  ? "down"
-                  : "stable",
-            };
-          })
-          .sort((a, b) => {
+            // Engagement statistics
+            reviews: stats.totalComments, // Comments are reviews
+            likes: stats.totalLikes,
+            rating: Math.round(finalRating * 10) / 10, // Round to 1 decimal
+            satisfaction: satisfactionScore,
+
+            // Derived metrics
+            engagementScore: stats.totalComments + stats.totalLikes,
+            type:
+              stats.brandBlasts > stats.brandBeats
+                ? "Mostly Positive"
+                : stats.brandBeats > stats.brandBlasts
+                ? "Mixed Reviews"
+                : "Balanced",
+
+            // Trend indicator
+            trend:
+              stats.brandBlasts > stats.brandBeats
+                ? "up"
+                : stats.brandBeats > stats.brandBlasts
+                ? "down"
+                : "stable",
+          });
+        });
+
+        const brandsWithStats = Array.from(uniqueBrandsMap.values()).sort(
+          (a, b) => {
             // Sort by engagement score (tells + comments + likes) by default
             return b.engagementScore - a.engagementScore;
-          });
+          }
+        );
 
         setBrands(brandsWithStats);
       } catch (err) {
@@ -492,7 +506,6 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
                             brandName={brand.name}
                             className="w-32 h-32 object-contain rounded-xl shadow-2xl bg-white/95 p-3"
                           />
-                          {/* <div className="text-xl sm:text-2xl">{brand.logo}</div> */}
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -537,13 +550,12 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
                       >
                         <div className="flex items-center gap-2 mb-2 sm:mb-3">
                           <div className="flex items-center">
-                            {/* <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" /> */}
                             <span className="ml-1 text-xs sm:text-sm font-medium">
-                              {/* {brand.rating} */}
+                              {/* Rating placeholder */}
                             </span>
                           </div>
                           <span className="text-xs sm:text-sm text-gray-500">
-                            {/* ({brand.reviews} reviews) */}
+                            {/* Reviews placeholder */}
                           </span>
                         </div>
                         {viewMode === "list" && (

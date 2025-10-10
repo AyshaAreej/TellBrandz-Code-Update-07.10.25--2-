@@ -15,6 +15,9 @@ interface BrowseStoriesProps {
 const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
   const [tells, setTells] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [lastCreatedAt, setLastCreatedAt] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const location = useRouterLocation();
   const { selectedCountry } = useCountryLocation();
   const tellRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -22,7 +25,7 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
   // Get navigation state
   const { highlightTellId, scrollToTell, openComments } = location.state || {};
 
-  // Fetch real tells from the backend
+  // Fetch real tells from the backend (initial page)
   useEffect(() => {
     const fetchTells = async () => {
       try {
@@ -43,7 +46,7 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
             brand_name,image_url,evidence_urls
           `)
           .order('created_at', { ascending: false })
-          .limit(2000);
+          .limit(10);
 
         if (selectedCountry && selectedCountry !== 'GLOBAL') {
           tellsQuery = tellsQuery.eq('country', selectedCountry);
@@ -99,9 +102,18 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
         });
 
         setTells(tellsWithCounts);
+        if (tellsWithCounts.length > 0) {
+          const last = tellsWithCounts[tellsWithCounts.length - 1];
+          setLastCreatedAt(last.created_at);
+          setHasMore(tellsWithCounts.length === 10);
+        } else {
+          setLastCreatedAt(null);
+          setHasMore(false);
+        }
       } catch (err) {
         console.error('Error fetching tells for homepage:', err);
         setTells([]);
+        setHasMore(false);
       } finally {
         setLoading(false);
       }
@@ -109,6 +121,72 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
 
     fetchTells();
   }, [selectedCountry]);
+
+  // Fetch next page (older tells) and append
+  const fetchMore = async () => {
+    if (isLoadingMore || !hasMore || !lastCreatedAt) return;
+    try {
+      setIsLoadingMore(true);
+
+      let tellsQuery = supabase
+        .from('tells')
+        .select(`
+          id,
+          title,
+          content,
+          status,
+          created_at,
+          tell_type,
+          user_id,
+          country,
+          brand_name,image_url,evidence_urls
+        `)
+        .lt('created_at', lastCreatedAt)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (selectedCountry && selectedCountry !== 'GLOBAL') {
+        tellsQuery = tellsQuery.eq('country', selectedCountry);
+      }
+
+      const { data, error } = await tellsQuery;
+      if (error) throw error;
+
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, full_name');
+      if (usersError) throw usersError;
+
+      const tellsWithUser = (data || []).map((tell) => {
+        const user = (usersData || []).find((u) => u.id === tell.user_id);
+        return {
+          ...tell,
+          user_name: user ? user.full_name : 'Unknown User',
+        };
+      });
+
+      const appended = tellsWithUser.map((tell) => ({
+        ...tell,
+        brandBlastsCount: 0,
+        brandBeatsCount: 0,
+      }));
+
+      setTells((prev) => [...prev, ...appended]);
+
+      if (tellsWithUser.length > 0) {
+        const last = tellsWithUser[tellsWithUser.length - 1];
+        setLastCreatedAt(last.created_at);
+        setHasMore(tellsWithUser.length === 10);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error fetching more tells:', err);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Handle scrolling to specific tell after data loads
   useEffect(() => {
@@ -196,6 +274,19 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
                 />
               </div>
             ))}
+
+            {hasMore && (
+              <div className="text-center pt-4">
+                <Button
+                  variant="outline"
+                  className="px-8 py-3"
+                  onClick={fetchMore}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? 'Loading...' : 'Load more'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
