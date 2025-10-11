@@ -504,7 +504,8 @@ const HomePage: React.FC<HomePageProps> = ({
                   <div className="mt-4">
                     <Link to="/brands">
                       <Button variant="outline" className="w-full">
-                        View All Brands ({brands.length})
+                        View All Brands 
+                        {/* ({brands.length}) */}
                       </Button>
                     </Link>
                   </div>
