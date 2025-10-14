@@ -121,7 +121,7 @@ const HomePage: React.FC<HomePageProps> = ({
           `
           )
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(20000);
 
         if (selectedCountry && selectedCountry !== "GLOBAL") {
           tellsQuery = tellsQuery.eq("country", selectedCountry);

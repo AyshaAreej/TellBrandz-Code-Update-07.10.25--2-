@@ -73,22 +73,34 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
           };
         });
 
-        // Fetch brand counts (BrandBlasts and BrandBeats counts)
+        // Get unique brand names from the fetched tells
+        const brandNames = [...new Set(tellsWithUser.map(tell => tell.brand_name))];
+
+        // Fetch actual counts for each brand from the entire database
         const brandCounts: { [brandName: string]: { brandBlasts: number; brandBeats: number } } = {};
 
-        tellsWithUser.forEach((tell) => {
-          const brandName = tell.brand_name;
+        for (const brandName of brandNames) {
+          // Count BrandBlasts
+          const { count: blastsCount, error: blastsError } = await supabase
+            .from('tells')
+            .select('*', { count: 'exact', head: true })
+            .eq('brand_name', brandName)
+            .eq('tell_type', 'BrandBlast');
 
-          if (!brandCounts[brandName]) {
-            brandCounts[brandName] = { brandBlasts: 0, brandBeats: 0 };
-          }
+          // Count BrandBeats
+          const { count: beatsCount, error: beatsError } = await supabase
+            .from('tells')
+            .select('*', { count: 'exact', head: true })
+            .eq('brand_name', brandName)
+            .eq('tell_type', 'BrandBeat');
 
-          if (tell.tell_type === 'BrandBlast') {
-            brandCounts[brandName].brandBlasts += 1;
-          } else if (tell.tell_type === 'BrandBeat') {
-            brandCounts[brandName].brandBeats += 1;
+          if (!blastsError && !beatsError) {
+            brandCounts[brandName] = {
+              brandBlasts: blastsCount || 0,
+              brandBeats: beatsCount || 0,
+            };
           }
-        });
+        }
 
         // Map counts to tells
         const tellsWithCounts = tellsWithUser.map((tell) => {
@@ -165,10 +177,33 @@ const BrowseStories: React.FC<BrowseStoriesProps> = ({ showHeader = true }) => {
         };
       });
 
+      // Get unique brand names and fetch their counts
+      const brandNames = [...new Set(tellsWithUser.map(tell => tell.brand_name))];
+      const brandCounts: { [brandName: string]: { brandBlasts: number; brandBeats: number } } = {};
+
+      for (const brandName of brandNames) {
+        const { count: blastsCount } = await supabase
+          .from('tells')
+          .select('*', { count: 'exact', head: true })
+          .eq('brand_name', brandName)
+          .eq('tell_type', 'BrandBlast');
+
+        const { count: beatsCount } = await supabase
+          .from('tells')
+          .select('*', { count: 'exact', head: true })
+          .eq('brand_name', brandName)
+          .eq('tell_type', 'BrandBeat');
+
+        brandCounts[brandName] = {
+          brandBlasts: blastsCount || 0,
+          brandBeats: beatsCount || 0,
+        };
+      }
+
       const appended = tellsWithUser.map((tell) => ({
         ...tell,
-        brandBlastsCount: 0,
-        brandBeatsCount: 0,
+        brandBlastsCount: brandCounts[tell.brand_name]?.brandBlasts || 0,
+        brandBeatsCount: brandCounts[tell.brand_name]?.brandBeats || 0,
       }));
 
       setTells((prev) => [...prev, ...appended]);
