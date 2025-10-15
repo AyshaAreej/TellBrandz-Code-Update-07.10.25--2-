@@ -149,20 +149,26 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
             );
 
             // Calculate satisfaction score based on BrandBlasts vs BrandBeats ratio
-            let satisfactionScore = 50; // Default neutral
-            if (stats.totalTells > 0) {
-              const blastPercentage =
-                (stats.brandBlasts / stats.totalTells) * 100;
-              satisfactionScore = Math.round(blastPercentage);
-            }
+              let satisfactionScore = 50; // Default neutral
+              if (stats.totalTells > 0) {
+                const blastPercentage =
+                  (stats.brandBlasts / stats.totalTells) * 100;
+                satisfactionScore = Math.round(blastPercentage);
+              }
 
-            // Generate a rating if we don't have comment ratings, based on satisfaction
-            let finalRating = 0;
-            if (finalRating === 0 && stats.totalTells > 0) {
-              // Generate rating based on satisfaction score
-              finalRating =
-                Math.round((satisfactionScore / 100) * 4 + 1 * 10) / 10;
-            }
+              // Rating logic: Start at 5, decrease gradually with each BrandBlast
+              let finalRating = 5;
+              if (stats.totalTells > 0) {
+                // Each BrandBlast decreases rating by 0.1
+                // Each BrandBeat keeps rating high
+                const decreasePerBlast = 0.1;
+                const totalDecrease = stats.brandBlasts * decreasePerBlast;
+                
+                finalRating = 5 - totalDecrease;
+                
+                // Ensure rating stays between 1 and 5
+                finalRating = Math.max(1, Math.min(5, finalRating));
+                 }
 
             return {
               id: brandData?.id || `brand-${i}`,
@@ -179,11 +185,12 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
               brandblastsCount: stats.brandBlasts,
               brandbeatsCount: stats.brandBeats,
 
-              // Engagement statistics
-              reviews: stats.totalComments, // Comments are reviews
+            // Engagement statistics
+              reviews: stats.totalTells, // Reviews should reflect number of tells
               likes: stats.totalLikes,
               rating: Math.round(finalRating * 10) / 10, // Round to 1 decimal
               satisfaction: satisfactionScore,
+
 
               // Derived metrics
               engagementScore: stats.totalComments + stats.totalLikes,
@@ -537,13 +544,13 @@ const BrandDirectory: React.FC<BrandDirectoryProps> = ({
                       >
                         <div className="flex items-center gap-2 mb-2 sm:mb-3">
                           <div className="flex items-center">
-                            {/* <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" /> */}
+                            <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
                             <span className="ml-1 text-xs sm:text-sm font-medium">
-                              {/* {brand.rating} */}
+                              {brand.rating}
                             </span>
                           </div>
                           <span className="text-xs sm:text-sm text-gray-500">
-                            {/* ({brand.reviews} reviews) */}
+                            ({brand.reviews} reviews)
                           </span>
                         </div>
                         {viewMode === "list" && (
