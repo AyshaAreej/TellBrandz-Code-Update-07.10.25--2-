@@ -24,6 +24,7 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
   required = false,
 }) => {
   const [inputValue, setInputValue] = useState(value);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<BrandSuggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,8 +37,16 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
   const generatePlaceholder = (brandName: string) => {
     const initial = brandName.charAt(0).toUpperCase();
     const colors = [
-      '#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B',
-      '#EF4444', '#06B6D4', '#6366F1', '#84CC16', '#F97316'
+      "#3B82F6",
+      "#8B5CF6",
+      "#EC4899",
+      "#10B981",
+      "#F59E0B",
+      "#EF4444",
+      "#06B6D4",
+      "#6366F1",
+      "#84CC16",
+      "#F97316",
     ];
     const colorIndex = brandName.charCodeAt(0) % colors.length;
     const bgColor = colors[colorIndex];
@@ -51,34 +60,27 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
         </text>
       </svg>
     `;
-    
     return `data:image/svg+xml;base64,${btoa(svg)}`;
   };
 
-  // Fetch brand suggestions from Supabase Edge Function
+  // Fetch brand suggestions
   const fetchBrandSuggestions = async (searchTerm: string): Promise<BrandSuggestion[]> => {
     try {
-      const { data, error } = await supabase.functions.invoke('brand-search', {
+      const { data, error } = await supabase.functions.invoke("brand-search", {
         body: { searchTerm },
       });
-
       if (error) {
-        console.error('Error fetching brands:', error);
+        console.error("Error fetching brands:", error);
         return [];
       }
-
-      if (data.success && data.brands) {
-        return data.brands;
-      }
-
-      return [];
+      return data.success && data.brands ? data.brands : [];
     } catch (error) {
-      console.error('Failed to fetch brand suggestions:', error);
+      console.error("Failed to fetch brand suggestions:", error);
       return [];
     }
   };
 
-  // Search and fetch suggestions with debounce
+  // Search debounce
   useEffect(() => {
     const searchBrands = async () => {
       if (inputValue.length < 2) {
@@ -86,16 +88,13 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
         setShowDropdown(false);
         return;
       }
-
       setLoading(true);
-      
       try {
         const brands = await fetchBrandSuggestions(inputValue);
         setSuggestions(brands);
         setShowDropdown(true);
-        setImageErrors(new Set()); // Reset image errors on new search
-      } catch (error) {
-        console.error('Error searching brands:', error);
+        setImageErrors(new Set());
+      } catch {
         setSuggestions([]);
       } finally {
         setLoading(false);
@@ -107,25 +106,20 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
     return () => clearTimeout(timeoutId);
   }, [inputValue]);
 
-  // Handle click outside
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle keyboard navigation
+  // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showDropdown || suggestions.length === 0) return;
-
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
@@ -151,37 +145,33 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
 
   const selectBrand = (brand: BrandSuggestion) => {
     setInputValue(brand.name);
-    onChange(brand.name, brand.logoUrl);
+    const logo = brand.logoUrl || generatePlaceholder(brand.name);
+    setLogoUrl(logo);
+    onChange(brand.name, logo);
     setShowDropdown(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+    setLogoUrl(null);
     onChange(newValue);
   };
 
   const handleCustomBrand = () => {
-    onChange(inputValue);
+    const placeholder = generatePlaceholder(inputValue);
+    setLogoUrl(placeholder);
+    onChange(inputValue, placeholder);
     setShowDropdown(false);
   };
 
-  const handleImageError = (brandDomain: string, brandName: string) => {
-    setImageErrors(prev => new Set(prev).add(brandDomain));
+  const handleImageError = (domain: string) => {
+    setImageErrors((prev) => new Set(prev).add(domain));
   };
 
   const getLogoSrc = (brand: BrandSuggestion) => {
-    // If image failed to load, use placeholder
-    if (imageErrors.has(brand.domain)) {
-      return generatePlaceholder(brand.name);
-    }
-    
-    // If logoUrl is already a data URI (placeholder), use it
-    if (brand.logoUrl?.startsWith('data:')) {
-      return brand.logoUrl;
-    }
-    
-    // Otherwise use the provided logo URL
+    if (imageErrors.has(brand.domain)) return generatePlaceholder(brand.name);
+    if (brand.logoUrl?.startsWith("data:")) return brand.logoUrl;
     return brand.logoUrl || generatePlaceholder(brand.name);
   };
 
@@ -199,10 +189,22 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
           onFocus={() => inputValue.length >= 2 && setShowDropdown(true)}
           placeholder={placeholder}
           required={required}
-          className="pl-10"
+          className="pl-10 pr-12" // ✅ Added right padding for logo
         />
+
+        {/* ✅ Selected brand logo shown inside input */}
+        {logoUrl && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 w-7 h-7 rounded-md border border-gray-200 bg-white flex items-center justify-center overflow-hidden">
+            <img
+              src={logoUrl}
+              alt="Brand logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        )}
       </div>
 
+      {/* Dropdown */}
       {showDropdown && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
           {loading ? (
@@ -229,19 +231,15 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {/* Logo with error handling */}
-                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden">
                       <img
                         src={getLogoSrc(brand)}
                         alt={`${brand.name} logo`}
                         className="w-full h-full object-contain p-1"
                         loading="lazy"
-                        onError={() => handleImageError(brand.domain, brand.name)}
-                        style={{ imageRendering: 'crisp-edges' }}
+                        onError={() => handleImageError(brand.domain)}
                       />
                     </div>
-
-                    {/* Brand Info */}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 truncate">
                         {brand.name}
@@ -253,8 +251,6 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Selected Indicator */}
                   {inputValue === brand.name && (
                     <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
                   )}
@@ -263,17 +259,19 @@ const BrandAutocomplete: React.FC<BrandAutocompleteProps> = ({
             </ul>
           )}
 
-          {/* Custom brand option */}
+          {/* Custom brand */}
           {inputValue.length >= 2 && (
             <div className="border-t border-gray-200 p-2">
               <button
                 type="button"
                 onClick={handleCustomBrand}
-                className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors flex items-center gap-2"
+                className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded flex items-center gap-2"
               >
                 <Building2 className="h-4 w-4 text-gray-400" />
                 <span>
-                  Use "<span className="font-medium text-gray-900">{inputValue}</span>" as custom brand
+                  Use "
+                  <span className="font-medium text-gray-900">{inputValue}</span>" as
+                  custom brand
                 </span>
               </button>
             </div>
