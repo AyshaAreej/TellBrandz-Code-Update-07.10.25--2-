@@ -62,7 +62,7 @@ const DynamicHeroBanner: React.FC<DynamicHeroBannerProps> = ({
           `
           )
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(200000);
 
         if (selectedCountry && selectedCountry !== "GLOBAL") {
           tellsQuery = tellsQuery.eq("country", selectedCountry);

@@ -481,9 +481,12 @@ const HomePage: React.FC<HomePageProps> = ({
                                 </span>
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
-                                {brand.brandblaststCount} BrandBlast •{" "}
-                                {brand.brandbeatsCount} BrandBeat
+                                {brand.brandblaststCount}{" "}
+                                {brand.brandblaststCount === 1 ? "BrandBlast" : "BrandBlasts"} •{" "}
+                                {brand.brandbeatsCount}{" "}
+                                {brand.brandbeatsCount === 1 ? "BrandBeat" : "BrandBeats"}
                               </div>
+
                             </div>
                           </div>
                         </Link>
