@@ -1,22 +1,28 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload, X, Image, Video, FileText } from 'lucide-react';
-import { useTells } from '@/hooks/useTells';
-import { supabase } from '@/lib/supabase';
-import { BrandLogoFetcher } from './BrandLogoFetcher';
-import SuccessNotification from './SuccessNotification';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Upload, X, Image, Video } from "lucide-react";
+import { useTells } from "@/hooks/useTells";
+import { supabase } from "@/lib/supabase";
+import BrandAutocomplete from "./BrandAutoComplete";
+import SuccessNotification from "./SuccessNotification";
 
 interface MediaFile {
   id: string;
   file: File;
   preview: string;
   url?: string;
-  type: 'image' | 'video';
+  type: "image" | "video";
   uploading: boolean;
 }
 
@@ -29,117 +35,180 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [country, setCountry] = useState<string>("");
+  const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    type: 'BrandBlast' as 'BrandBlast' | 'BrandBeat',
-    title: '',
-    description: '',
-    brand_name: '',
+    type: "BrandBlast" as "BrandBlast" | "BrandBeat",
+    title: "",
+    description: "",
+    brand_name: "",
   });
+  const [location, setLocation] = useState<string>("");
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   const uploadFile = async (file: File, mediaId: string) => {
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}_${mediaId}.${fileExt}`;
-      
+
       const { data, error } = await supabase.storage
-        .from('tell-images')
+        .from("tell-images")
         .upload(fileName, file);
-      
+
       if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('tell-images')
-        .getPublicUrl(fileName);
-      
-      setMediaFiles(prev => prev.map(media => 
-        media.id === mediaId 
-          ? { ...media, url: publicUrl, uploading: false }
-          : media
-      ));
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("tell-images").getPublicUrl(fileName);
+
+      setMediaFiles((prev) =>
+        prev.map((media) =>
+          media.id === mediaId
+            ? { ...media, url: publicUrl, uploading: false }
+            : media
+        )
+      );
     } catch (error) {
-      console.error('File upload failed:', error);
-      setMediaFiles(prev => prev.map(media => 
-        media.id === mediaId 
-          ? { ...media, uploading: false }
-          : media
-      ));
+      console.error("File upload failed:", error);
+      setMediaFiles((prev) =>
+        prev.map((media) =>
+          media.id === mediaId ? { ...media, uploading: false } : media
+        )
+      );
     }
+  };
+
+  const requestLocation = async () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setLoadingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const { data, error } = await supabase.functions.invoke(
+            "geolocation-service",
+            {
+              body: { lat: latitude, lon: longitude },
+            }
+          );
+
+          if (error) throw error;
+
+          if (data?.city && data?.country) {
+            const locationString = `${data.country}, ${data.countryCode}`;
+            setLocation(locationString);
+            setCountry(data.countryCode);
+          } else {
+            setLocation("Unknown Location");
+            setCountry("US");
+          }
+        } catch (err) {
+          console.error("Error resolving location:", err);
+          setLocation("Unknown Location");
+          setCountry("US");
+        } finally {
+          setLoadingLocation(false);
+        }
+      },
+      (err) => {
+        console.error("Geolocation error:", err);
+        setLoadingLocation(false);
+      }
+    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
-    files.forEach(file => {
+
+    files.forEach((file) => {
       const mediaId = `${Date.now()}_${Math.random()}`;
-      const isVideo = file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
-      
+      const isVideo = file.type.startsWith("video/");
+      const isImage = file.type.startsWith("image/");
+
       if (!isVideo && !isImage) return;
-      
+
       const reader = new FileReader();
       reader.onload = () => {
         const newMedia: MediaFile = {
           id: mediaId,
           file,
           preview: reader.result as string,
-          type: isVideo ? 'video' : 'image',
-          uploading: true
+          type: isVideo ? "video" : "image",
+          uploading: true,
         };
-        
-        setMediaFiles(prev => [...prev, newMedia]);
+
+        setMediaFiles((prev) => [...prev, newMedia]);
         uploadFile(file, mediaId);
       };
       reader.readAsDataURL(file);
     });
-    
-    // Reset input
-    e.target.value = '';
+
+    e.target.value = "";
   };
 
   const removeMedia = (mediaId: string) => {
-    setMediaFiles(prev => prev.filter(media => media.id !== mediaId));
+    setMediaFiles((prev) => prev.filter((media) => media.id !== mediaId));
+  };
+
+  const handleBrandChange = (brandName: string, logoUrl?: string) => {
+    setFormData({ ...formData, brand_name: brandName });
+    if (logoUrl) {
+      setBrandLogoUrl(logoUrl);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
+    if (!location || location === "Unknown Location") {
+      alert("Please allow location access to continue.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const uploadedUrls = mediaFiles
-        .filter(media => media.url)
-        .map(media => media.url!);
-      
+        .filter((media) => media.url)
+        .map((media) => media.url!);
+
       await submitTell({
         ...formData,
         evidence_urls: uploadedUrls,
-        image_url: uploadedUrls[0] || '' // Keep backward compatibility
+        image_url: uploadedUrls[0] || "",
+        country: country || "US",
+        brand_logo_url: brandLogoUrl || undefined,
       });
-      
-      // Show success notification
+
       setShowSuccess(true);
-      
+
       // Reset form
       setFormData({
-        type: 'BrandBlast',
-        title: '',
-        description: '',
-        brand_name: '',
+        type: "BrandBlast",
+        title: "",
+        description: "",
+        brand_name: "",
       });
       setMediaFiles([]);
-      
-      // Navigate back after delay
+      setBrandLogoUrl(null);
+
       setTimeout(() => {
         onBack?.();
       }, 2000);
     } catch (error) {
-      console.error('Failed to submit tell:', error);
-      alert('Failed to submit experience. Please try again.');
+      console.error("Failed to submit tell:", error);
+      alert("Failed to submit experience. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const hasUploadingFiles = mediaFiles.some(media => media.uploading);
+  const hasUploadingFiles = mediaFiles.some((media) => media.uploading);
 
   return (
     <>
@@ -148,7 +217,6 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
         message="Experience shared successfully! Thank you for your feedback."
         onClose={() => setShowSuccess(false)}
       />
-      
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4 max-w-2xl">
           <Button variant="ghost" onClick={onBack} className="mb-6">
@@ -164,46 +232,55 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <Label>Experience Type</Label>
-                  <Select value={formData.type} onValueChange={(value: 'BrandBlast' | 'BrandBeat') => 
-                    setFormData({...formData, type: value})}>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: "BrandBlast" | "BrandBeat") =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BrandBlast">BrandBlast (Complaint)</SelectItem>
-                      <SelectItem value="BrandBeat">BrandBeat (Praise)</SelectItem>
+                      <SelectItem value="BrandBlast">
+                        BrandBlast (Complaint)
+                      </SelectItem>
+                      <SelectItem value="BrandBeat">
+                        BrandBeat (Praise)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="brand">Brand Name</Label>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-1">
-                      <Input
-                        id="brand"
-                        value={formData.brand_name}
-                        onChange={(e) => setFormData({...formData, brand_name: e.target.value})}
-                        placeholder="Enter brand name"
-                        required
-                      />
-                    </div>
-                    {formData.brand_name && (
-                      <BrandLogoFetcher 
-                        brandName={formData.brand_name}
-                        className="w-12 h-12 flex-shrink-0"
-                      />
-                    )}
-                  </div>
-                </div>
+
+                {/* Brand Autocomplete with Logo */}
+                <BrandAutocomplete
+                  value={formData.brand_name}
+                  onChange={handleBrandChange}
+                  placeholder="Search for a brand..."
+                  required
+                />
 
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="Brief title for your experience"
                     required
+                  />
+                </div>
+
+                <div>
+                  <Label>Location</Label>
+                  <Input
+                    value={loadingLocation ? "Detecting location..." : location}
+                    readOnly
+                    required
+                    placeholder="Tap to detect your location"
+                    onFocus={requestLocation}
                   />
                 </div>
 
@@ -212,7 +289,9 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="Describe your experience in detail"
                     rows={6}
                     required
@@ -222,7 +301,6 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                 <div>
                   <Label>Upload Images & Videos (Optional)</Label>
                   <div className="mt-2 space-y-4">
-                    {/* Upload Area */}
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                       <input
                         type="file"
@@ -243,12 +321,11 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                       </label>
                     </div>
 
-                    {/* Media Previews */}
                     {mediaFiles.length > 0 && (
                       <div className="grid grid-cols-2 gap-4">
                         {mediaFiles.map((media) => (
                           <div key={media.id} className="relative">
-                            {media.type === 'image' ? (
+                            {media.type === "image" ? (
                               <div className="relative">
                                 <img
                                   src={media.preview}
@@ -271,13 +348,15 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                                 </div>
                               </div>
                             )}
-                            
+
                             {media.uploading && (
                               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
-                                <div className="text-white text-sm">Uploading...</div>
+                                <div className="text-white text-sm">
+                                  Uploading...
+                                </div>
                               </div>
                             )}
-                            
+
                             <button
                               type="button"
                               onClick={() => removeMedia(media.id)}
@@ -292,12 +371,16 @@ const TellFormEnhanced: React.FC<TellFormEnhancedProps> = ({ onBack }) => {
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   disabled={loading || hasUploadingFiles}
                 >
-                  {loading ? 'Submitting...' : hasUploadingFiles ? 'Uploading files...' : 'Submit Experience'}
+                  {loading
+                    ? "Submitting..."
+                    : hasUploadingFiles
+                    ? "Uploading files..."
+                    : "Submit Experience"}
                 </Button>
               </form>
             </CardContent>

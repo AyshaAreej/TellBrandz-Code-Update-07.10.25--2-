@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header onAuthClick={() => navigate('/auth')} />
+      <Header onAuthClick={() => navigate('/auth')} isDashboard />
       <main className="flex-1 container mx-auto px-4 py-8">
         {renderDashboard()}
       </main>

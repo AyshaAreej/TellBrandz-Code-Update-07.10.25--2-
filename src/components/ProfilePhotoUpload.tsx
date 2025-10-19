@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload, Camera } from 'lucide-react';
@@ -14,26 +14,39 @@ interface ProfilePhotoUploadProps {
 
 export function ProfilePhotoUpload({ currentPhotoUrl, onPhotoUpdate }: ProfilePhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [displayUrl, setDisplayUrl] = useState<string | undefined>(currentPhotoUrl);
   const { toast } = useToast();
   const { user } = useAuth();
   const { updateProfilePhoto } = useUserProfile();
 
+  // Keep local preview in sync if parent/context updates the url
+  useEffect(() => {
+    setDisplayUrl(currentPhotoUrl);
+  }, [currentPhotoUrl]);
+
   const uploadPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
+      if (!user?.id) {
+        throw new Error('Please sign in before uploading a profile photo.');
+      }
       
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
 
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const fileExt = file.name.includes('.') ? file.name.split('.').pop() : 'png';
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `profile-photos/${fileName}`;
 
-      let { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('tell-images')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type || `image/${fileExt}`
+        });
 
       if (uploadError) {
         throw uploadError;
@@ -46,15 +59,16 @@ export function ProfilePhotoUpload({ currentPhotoUrl, onPhotoUpdate }: ProfilePh
       // Update user profile with new photo URL
       const { error: updateError } = await supabase
         .from('users')
-        .update({ profile_photo_url: data.publicUrl })
+        .update({ avatar_url: data.publicUrl })
         .eq('id', user?.id);
 
       if (updateError) {
         throw updateError;
       }
 
-      // Update global context
+      // Update global context and local preview
       updateProfilePhoto(data.publicUrl);
+      setDisplayUrl(data.publicUrl);
       
       // Call local callback if provided
       onPhotoUpdate?.(data.publicUrl);
@@ -77,7 +91,7 @@ export function ProfilePhotoUpload({ currentPhotoUrl, onPhotoUpdate }: ProfilePh
   return (
     <div className="flex flex-col items-center gap-4">
       <Avatar className="w-24 h-24">
-        <AvatarImage src={currentPhotoUrl || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757134664984_8ba0be21.png'} />
+        <AvatarImage src={displayUrl || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757134664984_8ba0be21.png'} />
         <AvatarFallback>
           <Camera className="w-8 h-8 text-gray-400" />
         </AvatarFallback>

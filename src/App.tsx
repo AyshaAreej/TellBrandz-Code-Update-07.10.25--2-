@@ -19,6 +19,8 @@ import ShareExperience from '@/pages/ShareExperience';
 import Dashboard from '@/pages/Dashboard';
 import AuthCallback from '@/pages/AuthCallback';
 import AuthFormFixed from '@/components/AuthFormFixed';
+import BrandProfilePage from './components/BrandProfilePage';
+import ResetPassword from './components/ResetPassword';
 
 const App = () => (
   <ThemeProvider defaultTheme="light">
@@ -32,6 +34,7 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/brand/:slug" element={<BrandProfilePage />} />
           <Route path="/guidelines" element={<Guidelines />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -43,6 +46,7 @@ const App = () => (
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/auth" element={<AuthFormFixed />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Index />} />
         </Routes>
       </Router>

@@ -26,7 +26,7 @@ export const UserProfile: React.FC = () => {
     email: user?.email || ''
   });
 
-  const userTells = tells.filter(tell => tell.userName === user?.user_metadata?.full_name);
+  const userTells = tells.filter(tell => tell.user_id === user?.id);
 
   const handleSaveProfile = () => {
     // TODO: Implement profile update

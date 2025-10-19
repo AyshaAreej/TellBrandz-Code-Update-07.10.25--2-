@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { fallbackMonitor } from '../lib/monitoring';
 
 export interface Tell {
+  id?: string;
   type: 'BrandBlast' | 'BrandBeat';
   title: string;
   description: string;
@@ -10,6 +11,9 @@ export interface Tell {
   user_id: string;
   status: 'pending' | 'published' | 'rejected';
   resolved: boolean;
+  country?: string; // Add country field
+  location?: string; // Add location field
+  image_url?: string; // Add image_url field
   created_at: string;
   updated_at: string;
 }
@@ -20,8 +24,7 @@ export const useTells = (country?: string) => {
 
   const fetchTells = async (filterCountry?: string) => {
     try {
-      // Mock data for when Supabase functions aren't available
-      // Mock data for when Supabase functions aren't available
+      // Updated mock data with country field
       const mockTells: Tell[] = [
         {
           id: '1',
@@ -32,6 +35,8 @@ export const useTells = (country?: string) => {
           user_id: 'user1',
           status: 'published',
           resolved: false,
+          country: 'US',
+          location: 'New York, US',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -44,6 +49,8 @@ export const useTells = (country?: string) => {
           user_id: 'user2',
           status: 'published',
           resolved: false,
+          country: 'UK',
+          location: 'London, UK',
           created_at: new Date(Date.now() - 86400000).toISOString(),
           updated_at: new Date(Date.now() - 86400000).toISOString(),
         },
@@ -56,6 +63,8 @@ export const useTells = (country?: string) => {
           user_id: 'user3',
           status: 'published',
           resolved: false,
+          country: 'CA',
+          location: 'Toronto, CA',
           created_at: new Date(Date.now() - 172800000).toISOString(),
           updated_at: new Date(Date.now() - 172800000).toISOString(),
         },
@@ -68,6 +77,8 @@ export const useTells = (country?: string) => {
           user_id: 'user4',
           status: 'published',
           resolved: false,
+          country: 'AU',
+          location: 'Sydney, AU',
           created_at: new Date(Date.now() - 259200000).toISOString(),
           updated_at: new Date(Date.now() - 259200000).toISOString(),
         },
@@ -80,6 +91,8 @@ export const useTells = (country?: string) => {
           user_id: 'user5',
           status: 'published',
           resolved: false,
+          country: 'US',
+          location: 'Los Angeles, US',
           created_at: new Date(Date.now() - 345600000).toISOString(),
           updated_at: new Date(Date.now() - 345600000).toISOString(),
         },
@@ -92,6 +105,8 @@ export const useTells = (country?: string) => {
           user_id: 'user6',
           status: 'published',
           resolved: false,
+          country: 'DE',
+          location: 'Berlin, DE',
           created_at: new Date(Date.now() - 432000000).toISOString(),
           updated_at: new Date(Date.now() - 432000000).toISOString(),
         },
@@ -104,6 +119,8 @@ export const useTells = (country?: string) => {
           user_id: 'user7',
           status: 'published',
           resolved: false,
+          country: 'FR',
+          location: 'Paris, FR',
           created_at: new Date(Date.now() - 518400000).toISOString(),
           updated_at: new Date(Date.now() - 518400000).toISOString(),
         },
@@ -116,6 +133,8 @@ export const useTells = (country?: string) => {
           user_id: 'user8',
           status: 'published',
           resolved: false,
+          country: 'JP',
+          location: 'Tokyo, JP',
           created_at: new Date(Date.now() - 604800000).toISOString(),
           updated_at: new Date(Date.now() - 604800000).toISOString(),
         },
@@ -128,6 +147,8 @@ export const useTells = (country?: string) => {
           user_id: 'user9',
           status: 'published',
           resolved: false,
+          country: 'IN',
+          location: 'Mumbai, IN',
           created_at: new Date(Date.now() - 691200000).toISOString(),
           updated_at: new Date(Date.now() - 691200000).toISOString(),
         }
@@ -169,15 +190,29 @@ export const useTells = (country?: string) => {
     brand_name: string;
     image_url?: string;
     evidence_urls?: string[];
-  }) => {
+    country?: string;
+    location?: string; // Add location to the interface
+    }) => {
     try {
+      console.log("submitTell tellData with country:", tellData);
+      
       const { data, error } = await supabase.functions.invoke('submit-tell', {
-        body: tellData
+        body: {
+          ...tellData,
+          // Ensure country and location are explicitly passed
+          country: tellData.country,
+          location: tellData.location
+        }
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
       
       // Add the new tell to local state immediately for instant UI update
       if (data?.tell) {
+        console.log("New tell added to state:", data.tell);
         setTells(prev => [data.tell, ...prev]);
       }
       

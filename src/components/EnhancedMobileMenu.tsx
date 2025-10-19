@@ -13,13 +13,15 @@ interface EnhancedMobileMenuProps {
   onTellStoryClick: () => void;
   isOpen: boolean;
   onClose: () => void;
+  isDashboard?: boolean;
 }
 
 const EnhancedMobileMenu: React.FC<EnhancedMobileMenuProps> = ({ 
   onAuthClick, 
   onTellStoryClick, 
   isOpen, 
-  onClose 
+  onClose,
+  isDashboard = false
 }) => {
   const { setCurrentView, user } = useAppContext();
   const { userProfile } = useUserProfile();
@@ -162,7 +164,7 @@ const EnhancedMobileMenu: React.FC<EnhancedMobileMenuProps> = ({
               <>
                 <Avatar className="h-5 w-5">
                   <AvatarImage 
-                    src={userProfile?.profile_photo_url || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757129321085_96dfb1d7.png'} 
+                    src={userProfile?.profile_photo_url || userProfile?.avatar_url || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757129321085_96dfb1d7.png'} 
                     alt="Profile" 
                   />
                   <AvatarFallback>
@@ -179,13 +181,22 @@ const EnhancedMobileMenu: React.FC<EnhancedMobileMenuProps> = ({
             )}
           </Button>
           
-          <Button
-            onClick={handleTellStoryClick}
-            className="w-full bg-gradient-to-r from-orange-500 to-yellow-400 text-white hover:from-orange-600 hover:to-yellow-500 font-semibold h-12 shadow-lg"
-          >
-            <Zap className="h-4 w-4 mr-2" />
-            Tell Your Story
-          </Button>
+          {isDashboard ? (
+            <Button
+              asChild
+              className="w-full bg-gray-900 text-white hover:bg-black font-semibold h-12 shadow-lg"
+            >
+              <Link to="/">Home</Link>
+            </Button>
+          ) : (
+            <Button
+              onClick={handleTellStoryClick}
+              className="w-full bg-gradient-to-r from-orange-500 to-yellow-400 text-white hover:from-orange-600 hover:to-yellow-500 font-semibold h-12 shadow-lg"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Tell Your Story
+            </Button>
+          )}
         </div>
       </div>
     </>

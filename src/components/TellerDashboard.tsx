@@ -1,19 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { Plus, MessageSquare, Calendar, User, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
-import { useUserProfile } from '@/contexts/UserProfileContext';
-import { DarkModeToggle } from '@/components/DarkModeToggle';
-import DataInsightsPanel from '@/components/DataInsightsPanel';
-import DataAuditPanel from '@/components/DataAuditPanel';
-
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Plus, MessageSquare, Calendar, User, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
+import TellCard from "./ui/tellCard";
 
 interface Tell {
   id: string;
@@ -21,15 +19,20 @@ interface Tell {
   content: string;
   status: string;
   created_at: string;
-  brands: {
-    name: string;
-    logo_url?: string;
-  };
+  brand_id: string | null;
+  brand_name?: string;
+}
+
+interface Brand {
+  id: string;
+  name: string;
+  logo_url?: string;
 }
 
 export default function TellerDashboard() {
   const { user } = useAuth();
   const [tells, setTells] = useState<Tell[]>([]);
+  const [brands, setBrands] = useState<Record<string, Brand>>({});
   const [loading, setLoading] = useState(true);
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
@@ -43,65 +46,91 @@ export default function TellerDashboard() {
 
   const fetchUserTells = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tells')
-        .select(`
-          id, title, description, status, created_at, type, brand_name
-        `)
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+      setLoading(true);
 
-      if (error) throw error;
+      // Fetch tells for the user
+      const { data: tellsData, error: tellsError } = await supabase
+        .from("tells")
+        .select("id, title, content, status, created_at, brand_id,brand_name",)
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
+
+      if (tellsError) throw tellsError;
+
+      // Collect all unique brand IDs
+      const brandIds = [
+        ...new Set(tellsData?.map((t) => t.brand_id).filter(Boolean)),
+      ];
+
       
-      // Transform data to match expected format
-      const transformedTells = (data || []).map(tell => ({
+
+      // Attach brand names to tells
+      const mergedTells = (tellsData || []).map((tell) => ({
         ...tell,
-        content: tell.description,
-        brands: {
-          name: tell.brand_name,
-          logo_url: null
-        }
+        // brand_name: brandsMap[tell.brand_id || ""]?.name || "Unknown Brand",
       }));
-      
-      setTells(transformedTells);
+
+      setTells(mergedTells);
+      console.log("Merged tells:", mergedTells);
     } catch (error) {
-      console.error('Error fetching tells:', error);
+      console.error("Error fetching tells:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch your tells',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to fetch your tells",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const getDisplayName = (fullName = false) => {
+    if (userProfile?.full_name) {
+      return fullName
+        ? userProfile.full_name
+        : userProfile.full_name.split(" ")[0];
+    }
+    if (user?.user_metadata?.full_name) {
+      return fullName
+        ? user.user_metadata.full_name
+        : user.user_metadata.full_name.split(" ")[0];
+    }
+    if (user?.user_metadata?.name) {
+      return fullName
+        ? user.user_metadata.name
+        : user.user_metadata.name.split(" ")[0];
+    }
+    return "Teller";
+  };
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       toast({
-        title: 'Logged out successfully',
-        description: 'You have been signed out of your account',
+        title: "Logged out successfully",
+        description: "You have been signed out of your account",
       });
-      
-      navigate('/');
+
+      navigate("/");
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error("Error logging out:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to log out. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
       });
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'resolved':
-        return <Badge className="bg-green-100 text-green-800">✓ Resolved</Badge>;
-      case 'in_progress':
+      case "resolved":
+        return (
+          <Badge className="bg-green-100 text-green-800">✓ Resolved</Badge>
+        );
+      case "in_progress":
         return <Badge variant="secondary">In Progress</Badge>;
       default:
         return <Badge variant="destructive">Open</Badge>;
@@ -118,16 +147,16 @@ export default function TellerDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">
-                Welcome back, {userProfile?.full_name?.split(' ')[0] || 'Teller'}! 👋
+                Welcome back,{getDisplayName()}! 👋
               </h2>
               <p className="text-muted-foreground">
                 Ready to share your next experience?
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <ProfilePhotoUpload
-                currentPhotoUrl={userProfile?.profile_photo_url}
-              />
+              {/* <ProfilePhotoUpload
+                currentPhotoUrl={userProfile?.avatar_url}
+              /> */}
             </div>
           </div>
         </CardContent>
@@ -142,8 +171,8 @@ export default function TellerDashboard() {
                 Track your tells and brand interactions
               </p>
             </div>
-            <Button 
-              onClick={() => navigate('/share-experience')} 
+            <Button
+              onClick={() => navigate("/share-experience")}
               className="flex items-center justify-center gap-2 w-full sm:w-auto px-3 py-2 text-sm"
             >
               <Plus className="h-4 w-4 flex-shrink-0" />
@@ -153,91 +182,61 @@ export default function TellerDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="tells" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="tells">My Tells</TabsTrigger>
-              <TabsTrigger value="insights">Data & Insights</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
               <TabsTrigger value="profile">Profile</TabsTrigger>
             </TabsList>
-
             <TabsContent value="tells" className="mt-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {tells.map((tell) => (
-                  <div key={tell.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium">{tell.title}</h3>
-                      {getStatusBadge(tell.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{tell.content}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(tell.created_at).toLocaleDateString()}
-                        {tell.brands && (
-                          <>
-                            <span>•</span>
-                            <span>{tell.brands.name}</span>
-                          </>
-                        )}
-                      </div>
-                      <Button variant="outline" size="sm">
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
+                  <TellCard
+                    key={tell.id}
+                    tell={tell}
+                    getStatusBadge={getStatusBadge}
+                  />
                 ))}
+
                 {tells.length === 0 && (
                   <div className="text-center py-8">
                     <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4">No tells shared yet</p>
-                    <Button onClick={() => navigate('/share-experience')}>
+                    <p className="text-muted-foreground mb-4">
+                      No tells shared yet
+                    </p>
+                    <Button onClick={() => navigate("/share-experience")}>
                       Share Your First Experience
                     </Button>
                   </div>
                 )}
               </div>
             </TabsContent>
-            
-            <TabsContent value="insights" className="mt-6">
-              <Tabs defaultValue="insights" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="insights">Insights</TabsTrigger>
-                  <TabsTrigger value="data">Data Management</TabsTrigger>
-                </TabsList>
-                <TabsContent value="insights" className="mt-6">
-                  <DataInsightsPanel userId={user?.id || ''} />
-                </TabsContent>
-                <TabsContent value="data" className="mt-6">
-                  <DataAuditPanel userId={user?.id || ''} />
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-            
-
             <TabsContent value="stats" className="mt-6">
               <Card>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
                       <p className="text-2xl font-bold">{tells.length}</p>
-                      <p className="text-sm text-muted-foreground">Total Tells</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Tells
+                      </p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold">
-                        {tells.filter(t => t.status === 'resolved').length}
+                        {tells.filter((t) => t.status === "resolved").length}
                       </p>
                       <p className="text-sm text-muted-foreground">Resolved</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold">
-                        {tells.filter(t => t.status === 'in_progress').length}
+                        {tells.filter((t) => t.status === "in_progress").length}
                       </p>
-                      <p className="text-sm text-muted-foreground">In Progress</p>
+                      <p className="text-sm text-muted-foreground">
+                        In Progress
+                      </p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold">
-                        {tells.filter(t => t.status === 'open').length}
+                        {tells.filter((t) => t.status === "open").length}
                       </p>
                       <p className="text-sm text-muted-foreground">Pending</p>
                     </div>
@@ -252,11 +251,14 @@ export default function TellerDashboard() {
                     {/* Profile Photo and Info */}
                     <div className="text-center">
                       <ProfilePhotoUpload
-                        currentPhotoUrl={userProfile?.profile_photo_url}
+                        currentPhotoUrl={userProfile?.avatar_url}
                       />
                       <div className="mt-4">
                         <h3 className="text-lg font-semibold">
-                          {userProfile?.full_name || 'Teller'}
+                          {userProfile?.full_name ||
+                            user?.user_metadata?.full_name ||
+                            user?.user_metadata?.name ||
+                            "Teller"}
                         </h3>
                         <p className="text-muted-foreground">{user?.email}</p>
                       </div>
@@ -266,15 +268,17 @@ export default function TellerDashboard() {
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <h4 className="font-medium">Theme Preference</h4>
-                        <p className="text-sm text-muted-foreground">Choose your preferred theme</p>
+                        <p className="text-sm text-muted-foreground">
+                          Choose your preferred theme
+                        </p>
                       </div>
                       <DarkModeToggle />
                     </div>
 
                     {/* Logout Button */}
                     <div className="text-center">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={handleLogout}
                         className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
@@ -291,4 +295,4 @@ export default function TellerDashboard() {
       </Card>
     </div>
   );
-};
+}

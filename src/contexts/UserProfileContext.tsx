@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 
 interface UserProfile {
+  avatar_url: string;
   id: string;
   full_name: string;
-  profile_photo_url?: string;
+  // profile_photo_url?: string;
   email: string;
 }
 
@@ -33,7 +34,7 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, profile_photo_url, email')
+        .select('id, full_name, avatar_url, email')
         .eq('id', user.id)
         .single();
 
@@ -49,7 +50,7 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
 
   const updateProfilePhoto = (photoUrl: string) => {
     if (userProfile) {
-      setUserProfile({ ...userProfile, profile_photo_url: photoUrl });
+      setUserProfile({ ...userProfile, avatar_url: photoUrl });
     }
   };
 

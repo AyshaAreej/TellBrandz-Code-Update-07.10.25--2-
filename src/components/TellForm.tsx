@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from '@/hooks/useLocation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,24 +18,18 @@ interface TellFormProps {
 
 const TellForm: React.FC<TellFormProps> = ({ onBack }) => {
   const { submitTell } = useTells();
+  const { selectedCountry } = useLocation();
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-
   const [formData, setFormData] = useState({
     type: 'BrandBlast' as 'BrandBlast' | 'BrandBeat',
     title: '',
     description: '',
     brand_name: '',
     image_url: '',
-    age_range: '',
-    occupation: '',
-    income_range: '',
-    education_level: '',
-    household_size: undefined as number | undefined,
   });
-
 
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
@@ -81,7 +76,7 @@ const TellForm: React.FC<TellFormProps> = ({ onBack }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await submitTell(formData);
+      await submitTell({ ...formData });
       onBack?.();
     } catch (error) {
       console.error('Failed to submit tell:', error);
@@ -200,91 +195,6 @@ const TellForm: React.FC<TellFormProps> = ({ onBack }) => {
                   )}
                 </div>
               </div>
-
-              <div className="border-t pt-6 mt-6">
-                <h3 className="text-lg font-semibold mb-4">Optional: Help Us Understand Context</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Providing demographic information helps brands understand their customers better. All fields are optional.
-                </p>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="age_range">Age Range</Label>
-                    <Select value={formData.age_range} onValueChange={(v) => setFormData({...formData, age_range: v})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Prefer not to say" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Prefer not to say</SelectItem>
-                        <SelectItem value="18-24">18-24</SelectItem>
-                        <SelectItem value="25-34">25-34</SelectItem>
-                        <SelectItem value="35-44">35-44</SelectItem>
-                        <SelectItem value="45-54">45-54</SelectItem>
-                        <SelectItem value="55-64">55-64</SelectItem>
-                        <SelectItem value="65+">65+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="occupation">Occupation</Label>
-                    <Input
-                      id="occupation"
-                      value={formData.occupation}
-                      onChange={(e) => setFormData({...formData, occupation: e.target.value})}
-                      placeholder="Prefer not to say"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="income_range">Income Range</Label>
-                    <Select value={formData.income_range} onValueChange={(v) => setFormData({...formData, income_range: v})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Prefer not to say" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Prefer not to say</SelectItem>
-                        <SelectItem value="<25k">Less than $25,000</SelectItem>
-                        <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
-                        <SelectItem value="50k-75k">$50,000 - $75,000</SelectItem>
-                        <SelectItem value="75k-100k">$75,000 - $100,000</SelectItem>
-                        <SelectItem value="100k+">$100,000+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="education_level">Education Level</Label>
-                    <Select value={formData.education_level} onValueChange={(v) => setFormData({...formData, education_level: v})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Prefer not to say" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Prefer not to say</SelectItem>
-                        <SelectItem value="high-school">High School</SelectItem>
-                        <SelectItem value="associate">Associate Degree</SelectItem>
-                        <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
-                        <SelectItem value="master">Master's Degree</SelectItem>
-                        <SelectItem value="doctorate">Doctorate</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="household_size">Household Size</Label>
-                    <Input
-                      id="household_size"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={formData.household_size || ''}
-                      onChange={(e) => setFormData({...formData, household_size: e.target.value ? parseInt(e.target.value) : undefined})}
-                      placeholder="Prefer not to say"
-                    />
-                  </div>
-                </div>
-              </div>
-
 
               <Button type="submit" className="w-full" disabled={loading || uploadingImage}>
                 {loading ? 'Submitting...' : 'Submit Experience'}

@@ -8,6 +8,7 @@ import { BeFirstModal } from './BeFirstModal';
 import { isPlaceholderTell } from '@/utils/tellUtils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { BrandLogoFetcher } from './BrandLogoFetcher';
 interface BrandShowcaseSlideProps {
   id: string;
   brandLogo: string;
@@ -38,7 +39,7 @@ export function BrandShowcaseSlide({
   commentsLink
 }: BrandShowcaseSlideProps) {
   const [showBeFirstModal, setShowBeFirstModal] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<unknown>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -52,7 +53,7 @@ export function BrandShowcaseSlide({
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('profile_photo_url')
+        .select('avatar_url')
         .eq('id', user?.id)
         .single();
       if (!error) setUserProfile(data);
@@ -61,23 +62,27 @@ export function BrandShowcaseSlide({
     }
   };
   
-  const handleReadMore = () => {
+    const handleReadMore = () => {
     console.log(`Testing handleReadMore for ID: ${id}`);
     console.log(`Is placeholder: ${isPlaceholderTell(id)}`);
     
     if (isPlaceholderTell(id)) {
-      // Placeholder tell - redirect to how it works page
-      console.log('Navigating to /how-it-works#dummy-tell');
-      navigate('/how-it-works#dummy-tell');
+      // Placeholder tell - redirect to browse stories page
+      console.log('Navigating to /browse-stories');
+      navigate('/browse-stories');
     } else {
-      // Real tell - navigate to tell page
-      const url = tellSlug ? `/tell/${tellSlug}` : `/tell/${id}`;
-      console.log(`Navigating to real tell: ${url}`);
-      navigate(url);
+      // Real tell - navigate to browse stories and highlight this tell
+      console.log(`Navigating to browse stories with tell ID: ${id}`);
+      navigate('/browse-stories', { 
+        state: { 
+          highlightTellId: id,
+          scrollToTell: true 
+        } 
+      });
     }
   };
   
-  const handleComments = () => {
+ const handleComments = () => {
     console.log(`Testing handleComments for ID: ${id}`);
     console.log(`Is placeholder: ${isPlaceholderTell(id)}`);
     
@@ -86,10 +91,15 @@ export function BrandShowcaseSlide({
       console.log('Showing BeFirstModal');
       setShowBeFirstModal(true);
     } else {
-      // Real tell - navigate to comments section
-      const url = tellSlug ? `/tell/${tellSlug}#comments` : `/tell/${id}#comments`;
-      console.log(`Navigating to real tell comments: ${url}`);
-      navigate(url);
+      // Real tell - navigate to browse stories with comment focus
+      console.log(`Navigating to browse stories with comment focus for tell ID: ${id}`);
+      navigate('/browse-stories', { 
+        state: { 
+          highlightTellId: id,
+          scrollToTell: true,
+          openComments: true 
+        } 
+      });
     }
   };
   
@@ -115,9 +125,8 @@ export function BrandShowcaseSlide({
         <div className="flex items-center justify-center gap-4 md:gap-8 mb-3">
           {/* Brand Logo - Larger */}
           <div className="flex-shrink-0">
-            <img 
-              src="https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1755697625237_4987f07a.jpg"
-              alt={brandName}
+            <BrandLogoFetcher 
+              brandName={brandName}
               className="w-32 h-32 object-contain rounded-xl shadow-2xl bg-white/95 p-3"
             />
           </div>
@@ -147,7 +156,7 @@ export function BrandShowcaseSlide({
             {/* Teller info - Larger profile */}
             <div className="flex items-center gap-2">
               <Avatar className="w-10 h-10">
-                <AvatarImage src={userProfile?.profile_photo_url || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757134664984_8ba0be21.png'} alt={tellerFirstName} />
+                <AvatarImage src={tellerPhoto || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757134664984_8ba0be21.png'} alt={tellerFirstName} />
                 <AvatarFallback>{tellerFirstName[0]}</AvatarFallback>
                </Avatar>
               <div className="text-white text-left text-sm">

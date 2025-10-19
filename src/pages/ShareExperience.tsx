@@ -18,11 +18,11 @@ const ShareExperience = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header onAuthClick={() => navigate('/auth')} />
+        {/* <Header onAuthClick={() => navigate('/auth')} /> */}
         <main className="flex-1">
           <AuthFormFixed redirectTo="/share-experience" />
         </main>
-        <Footer />
+        {/* <Footer /> */}
       </div>
     );
   }

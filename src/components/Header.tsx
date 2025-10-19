@@ -15,9 +15,10 @@ import { useLocation } from '@/hooks/useLocation';
 interface HeaderProps {
   onMenuClick?: () => void;
   onAuthClick?: () => void;
+  isDashboard?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick, onAuthClick }) => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick, onAuthClick, isDashboard = false }) => {
   const { setCurrentView, user } = useAppContext();
   const { userProfile } = useUserProfile();
   const { isAdmin } = useAdmin();
@@ -66,19 +67,21 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onAuthClick }) => {
             {user ? (
               <Button
                 variant="ghost"
-                onClick={() => setCurrentView('profile')}
+                asChild
                 className="text-black hover:bg-gray-100 flex items-center gap-2"
               >
-                <Avatar className="h-6 w-6">
-                  <AvatarImage 
-                    src={userProfile?.profile_photo_url || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757129321085_96dfb1d7.png'} 
-                    alt="Profile" 
-                  />
-                  <AvatarFallback>
-                    <User className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-                Dashboard
+                <Link to={isDashboard ? '/' : '/dashboard'}>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage 
+                      src={userProfile?.avatar_url || 'https://d64gsuwffb70l.cloudfront.net/688b3314fcf74852e0269be1_1757129321085_96dfb1d7.png'} 
+                      alt="Profile" 
+                    />
+                    <AvatarFallback>
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  {isDashboard ? 'Explore' : 'Dashboard'}
+                </Link>
               </Button>
             ) : (
               <Button
@@ -90,12 +93,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onAuthClick }) => {
                 Sign In
               </Button>
             )}
-            <Button
-              onClick={handleTellStoryClick}
-              className="bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
-            >
-              Tell Your Story
-            </Button>
+          
+            {!isDashboard && (
+              <Button
+                onClick={handleTellStoryClick}
+                className="bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+              >
+                Tell Your Story
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -115,6 +121,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onAuthClick }) => {
         onTellStoryClick={handleTellStoryClick}
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
+        isDashboard={isDashboard}
       />
     </header>
   );
