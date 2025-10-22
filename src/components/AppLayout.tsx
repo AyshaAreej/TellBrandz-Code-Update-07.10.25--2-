@@ -57,7 +57,7 @@ const AppLayout: React.FC = () => {
         return <div className="container mx-auto py-8"><AdvancedSearchEngine /></div>;
       case 'profile':
         // Determine user type based on verification status and brand_id
-        { const isVerifiedBrand = user?.verification_status === 'approved' && user?.brand_id;
+        const isVerifiedBrand = user?.verification_status === 'approved' && user?.brand_id;
         const isBrand = user?.user_metadata?.user_type === 'brand';
         
         if (isVerifiedBrand) {
@@ -68,7 +68,7 @@ const AppLayout: React.FC = () => {
           return <TellerDashboard />;
         } else {
           return <UserProfile />;
-        } }
+        }
       case 'admin':
         return <AdminPanel />;
       default:
@@ -79,6 +79,7 @@ const AppLayout: React.FC = () => {
         />;
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors duration-300">
