@@ -9,75 +9,94 @@ const AuthCallback: React.FC = () => {
   const [status, setStatus] = React.useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = React.useState('Processing authentication...');
 
-  useEffect(() => {
-    const handleAuthCallback = async () => {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        const type = urlParams.get('type');
-        const returnTo = urlParams.get('returnTo');
+ useEffect(() => {
+  const handleAuthCallback = async () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const type = urlParams.get('type');
+      const returnTo = urlParams.get('returnTo');
 
-        if (token && type === 'signup') {
-          // Handle email verification
-          setMessage('Verifying your email address...');
-          
-          const { data, error } = await supabase.functions.invoke('custom-auth-verification', {
-            body: {
-              action: 'verify',
-              token
-            }
-          });
-
-          if (error || !data.success) {
-            throw new Error(data?.error || error?.message || 'Verification failed');
-          }
-
-          setStatus('success');
-          setMessage('Email verified successfully! Redirecting to dashboard...');
-          
-          // Redirect to dashboard after verification
-          setTimeout(() => {
-            navigate('/dashboard', { replace: true });
-          }, 2000);
-          
-        } else {
-          // Handle regular auth callback
-          const { data, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            throw error;
-          }
-
-          if (data.session) {
-            setStatus('success');
-            setMessage('Successfully signed in! Redirecting...');
-            
-            // Redirect to returnTo URL or home page after a short delay
-            setTimeout(() => {
-              if (returnTo) {
-                navigate(returnTo, { replace: true });
-              } else {
-                navigate('/', { replace: true });
-              }
-            }, 2000);
-          } else {
-            throw new Error('No session found');
-          }
-        }
-      } catch (error: any) {
-        console.error('Auth callback error:', error);
-        setStatus('error');
-        setMessage(error.message || 'Authentication failed');
+      // Handle brand verification
+      if (token && type === 'brand_verify') {
+        setMessage('Verifying your email address...');
         
-        // Redirect to auth page after a delay
-        setTimeout(() => {
-          navigate('/auth', { replace: true });
-        }, 3000);
-      }
-    };
+        const { data, error } = await supabase.functions.invoke('brand-user', {
+          body: {
+            action: 'verify',
+            token
+          }
+        });
 
-    handleAuthCallback();
-  }, [navigate]);
+        if (error || !data?.success) {
+          throw new Error(data?.error || error?.message || 'Verification failed');
+        }
+
+        setStatus('success');
+        setMessage('Email verified successfully! Redirecting to dashboard...');
+        
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 2000);
+      }
+      // Handle regular signup verification
+      else if (token && type === 'signup') {
+        setMessage('Verifying your email address...');
+        
+        const { data, error } = await supabase.functions.invoke('custom-auth-verification', {
+          body: {
+            action: 'verify',
+            token
+          }
+        });
+
+        if (error || !data?.success) {
+          throw new Error(data?.error || error?.message || 'Verification failed');
+        }
+
+        setStatus('success');
+        setMessage('Email verified successfully! Redirecting to dashboard...');
+        
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 2000);
+      }
+      // Handle regular auth callback
+      else {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+
+        if (data.session) {
+          setStatus('success');
+          setMessage('Successfully signed in! Redirecting...');
+          
+          setTimeout(() => {
+            if (returnTo) {
+              navigate(returnTo, { replace: true });
+            } else {
+              navigate('/', { replace: true });
+            }
+          }, 2000);
+        } else {
+          throw new Error('No session found');
+        }
+      }
+    } catch (error: any) {
+      console.error('Auth callback error:', error);
+      setStatus('error');
+      setMessage(error.message || 'Authentication failed');
+      
+      setTimeout(() => {
+        navigate('/auth', { replace: true });
+      }, 3000);
+    }
+  };
+
+  handleAuthCallback();
+}, [navigate]);
 
 
   return (

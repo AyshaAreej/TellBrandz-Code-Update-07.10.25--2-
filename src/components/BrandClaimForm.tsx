@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { ArrowLeft, Building2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBrands } from '@/hooks/useBrands';
 import EmailVerification from './EmailVerification';
+
 interface BrandClaimFormProps {
   onBack: () => void;
   onSuccess: () => void;
@@ -18,60 +19,78 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
   const { brands } = useBrands();
   const [loading, setLoading] = useState(false);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [formData, setFormData] = useState({
     brandId: '',
+    fullName: '',
     professionalEmail: '',
+    password: '',
     companyId: '',
     verificationDocuments: '',
     publicProfileLink: ''
   });
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      // Validate required fields
+      if (!formData.brandId || !formData.fullName || !formData.professionalEmail || !formData.password) {
+        throw new Error('Brand, full name, email, and password are required');
+      }
 
-      // Send verification email to professional email
-      const { error: emailError } = await supabase.functions.invoke('brand-management', {
+      // Call brand-user edge function to create user and send verification email
+      const { data, error: functionError } = await supabase.functions.invoke('brand-user', {
         body: {
-          action: 'send_verification_email',
+          action: 'signup',
           email: formData.professionalEmail,
+          password: formData.password,
+          fullName: formData.fullName,
           brandId: formData.brandId,
-          userId: user.id
+          companyId: formData.companyId,
+          verificationDocuments: formData.verificationDocuments,
+          publicProfileLink: formData.publicProfileLink
         }
       });
 
-      if (emailError) throw emailError;
-
-      const { error } = await supabase.from('brand_claims').insert({
-        user_id: user.id,
-        brand_id: formData.brandId,
-        professional_email: formData.professionalEmail,
-        company_id: formData.companyId,
-        verification_documents: formData.verificationDocuments,
-        public_profile_link: formData.publicProfileLink
-      });
-
-      if (error) throw error;
-
-      // Update user verification status to pending
-      await supabase.from('users').update({
-        verification_status: 'pending'
-      }).eq('id', user.id);
+      if (functionError) throw functionError;
 
       setVerificationEmail(formData.professionalEmail);
       setShowEmailVerification(true);
-    } catch (error) {
-      console.error('Error submitting brand claim:', error);
-      alert('Failed to submit brand claim: ' + (error as Error).message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit brand claim';
+      setError(errorMessage);
+      console.error('Error submitting brand claim:', err);
     } finally {
       setLoading(false);
     }
   };
+    const getPasswordStrength = () => {
+    const password = formData.password;
+    if (!password) return { strength: 0, text: '' };
+    
+    let strength = 0;
+    if (password.length >= 6) strength++;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+    const strengthTexts = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+    
+    return {
+      strength,
+      text: strengthTexts[Math.min(strength, 4)],
+      color: colors[Math.min(strength, 4)]
+    };
+  };
+
+  const passwordStrength = getPasswordStrength();
 
   if (showEmailVerification) {
     return (
@@ -101,6 +120,12 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                  {error}
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="brand">Brand</Label>
                 <Select value={formData.brandId} onValueChange={(value) => setFormData({...formData, brandId: value})}>
@@ -118,6 +143,18 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
               </div>
 
               <div>
+                <Label htmlFor="full-name">Full Name</Label>
+                <Input
+                  id="full-name"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="professional-email">Professional Email</Label>
                 <Input
                   id="professional-email"
@@ -128,6 +165,27 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
                   required
                 />
               </div>
+
+             <div>
+            <Label htmlFor="password">Password *</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
 
               <div>
                 <Label htmlFor="company-id">Company ID (Optional)</Label>
