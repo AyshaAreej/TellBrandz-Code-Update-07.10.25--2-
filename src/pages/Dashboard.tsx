@@ -69,8 +69,9 @@ const Dashboard: React.FC = () => {
 
   // Logic based on fetched data
   const isVerifiedBrand = userType === 'brand' && verificationStatus === 'approved' && !!brandId;
-  const isBrand = userType === 'brand' && verificationStatus !== 'approved';
-
+  const isBrand = userType === 'brand' && verificationStatus !== 'approved';   
+console.log('isBrand:', isBrand);
+console.log('isverifiedBrand:', isVerifiedBrand);
   const renderDashboard = () => {
     if (isVerifiedBrand) {
       return <BrandDashboard />;
