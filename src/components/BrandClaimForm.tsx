@@ -148,7 +148,7 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-      <div className="w-full max-w-md max-h-screen overflow-y-auto">
+      <div className="w-full max-w-md">
         <Button variant="ghost" onClick={onBack} className="mb-4 text-white hover:bg-white/20">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
