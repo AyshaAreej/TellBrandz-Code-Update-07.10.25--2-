@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Building2, Eye, EyeOff, Upload, X } from 'lucide-react';
+import { ArrowLeft, Building2, Eye, EyeOff, Upload, X, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBrands } from '@/hooks/useBrands';
 import EmailVerification from './EmailVerification';
@@ -23,6 +22,8 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
   const [showPassword, setShowPassword] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<Array<{name: string, url: string}>>([]);
+  const [brandSearch, setBrandSearch] = useState('');
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const [formData, setFormData] = useState({
     brandId: '',
     fullName: '',
@@ -33,6 +34,18 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
     publicProfileLink: ''
   });
   const [error, setError] = useState('');
+
+  const filteredBrands = brands.filter(brand =>
+    brand.name.toLowerCase().includes(brandSearch.toLowerCase())
+  );
+
+  const selectedBrand = brands.find(b => b.id === formData.brandId);
+
+  const handleBrandSelect = (brandId: string) => {
+    setFormData({ ...formData, brandId });
+    setShowBrandDropdown(false);
+    setBrandSearch('');
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -77,26 +90,37 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
     setLoading(true);
 
     try {
+      // Trim whitespace from all string fields
+      const trimmedFormData = {
+        ...formData,
+        fullName: formData.fullName.trim(),
+        professionalEmail: formData.professionalEmail.trim(),
+        password: formData.password.trim(),
+        companyId: formData.companyId.trim(),
+        verificationDocuments: formData.verificationDocuments.trim(),
+        publicProfileLink: formData.publicProfileLink.trim()
+      };
+
       // Validate required fields
-      if (!formData.brandId || !formData.fullName || !formData.professionalEmail || !formData.password) {
-        throw new Error('Brand, full name, email, and password are required');
+      if (!trimmedFormData.brandId || !trimmedFormData.fullName || !trimmedFormData.professionalEmail || !trimmedFormData.password || !trimmedFormData.publicProfileLink) {
+        throw new Error('Brand, full name, email, password, and LinkedIn profile link are required');
       }
 
       // Combine uploaded file URLs
       const documentUrls = uploadedFiles.map(f => f.url).join(',');
-      const verificationDocuments = documentUrls || formData.verificationDocuments;
+      const verificationDocuments = documentUrls || trimmedFormData.verificationDocuments;
 
       // Call brand-user edge function to create user and send verification email
       const { data, error: functionError } = await supabase.functions.invoke('brand-user', {
         body: {
           action: 'signup',
-          email: formData.professionalEmail,
-          password: formData.password,
-          fullName: formData.fullName,
-          brandId: formData.brandId,
-          companyId: formData.companyId,
+          email: trimmedFormData.professionalEmail,
+          password: trimmedFormData.password,
+          fullName: trimmedFormData.fullName,
+          brandId: trimmedFormData.brandId,
+          companyId: trimmedFormData.companyId,
           verificationDocuments: verificationDocuments,
-          publicProfileLink: formData.publicProfileLink
+          publicProfileLink: trimmedFormData.publicProfileLink
         }
       });
 
@@ -172,18 +196,38 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
 
               <div>
                 <Label htmlFor="brand">Brand *</Label>
-                <Select value={formData.brandId} onValueChange={(value) => setFormData({...formData, brandId: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((brand) => (
-                      <SelectItem key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="brand"
+                    type="text"
+                    placeholder="Search for a brand..."
+                    value={showBrandDropdown ? brandSearch : (selectedBrand?.name || '')}
+                    onChange={(e) => setBrandSearch(e.target.value)}
+                    onFocus={() => setShowBrandDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowBrandDropdown(false), 200)}
+                    className="pl-9"
+                  />
+                  
+                  {showBrandDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                      {filteredBrands.length > 0 ? (
+                        filteredBrands.map((brand) => (
+                          <button
+                            key={brand.id}
+                            type="button"
+                            onMouseDown={() => handleBrandSelect(brand.id)}
+                            className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none transition-colors border-b border-gray-100 last:border-b-0"
+                          >
+                            {brand.name}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-gray-500 text-sm">No brands found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -258,15 +302,15 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
               </div>
 
               <div>
-                <Label htmlFor="public-profile">Public Profile Link</Label>
+                <Label htmlFor="public-profile">LinkedIn Profile Link (MANDATORY)</Label>
                 <Input
                   id="public-profile"
                   type="url"
                   value={formData.publicProfileLink}
                   onChange={(e) => setFormData({...formData, publicProfileLink: e.target.value})}
                   placeholder="https://linkedin.com/in/yourprofile"
+                  required
                 />
-                <p className="text-xs text-gray-500 mt-1">LinkedIn, company website, etc.</p>
               </div>
 
               <div>
