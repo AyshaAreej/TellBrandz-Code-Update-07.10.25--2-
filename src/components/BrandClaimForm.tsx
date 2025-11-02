@@ -4,10 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Building2, Eye, EyeOff, Upload, X, Search } from 'lucide-react';
+import { ArrowLeft, Building2, Eye, EyeOff, Upload, X, Search, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBrands } from '@/hooks/useBrands';
-import EmailVerification from './EmailVerification';
 
 interface BrandClaimFormProps {
   onBack: () => void;
@@ -18,12 +17,11 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
   const { brands } = useBrands();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<Array<{name: string, url: string}>>([]);
   const [brandSearch, setBrandSearch] = useState('');
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [formData, setFormData] = useState({
     brandId: '',
     fullName: '',
@@ -90,7 +88,12 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
     setLoading(true);
 
     try {
-      // Trim whitespace from all string fields
+      let publicProfileLink = formData.publicProfileLink.trim();
+      
+      if (publicProfileLink && !publicProfileLink.startsWith('http://') && !publicProfileLink.startsWith('https://')) {
+        publicProfileLink = 'https://' + publicProfileLink;
+      }
+
       const trimmedFormData = {
         ...formData,
         fullName: formData.fullName.trim(),
@@ -98,24 +101,20 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
         password: formData.password.trim(),
         companyId: formData.companyId.trim(),
         verificationDocuments: formData.verificationDocuments.trim(),
-        publicProfileLink: formData.publicProfileLink.trim()
+        publicProfileLink: publicProfileLink
       };
 
-      // Validate required fields
       if (!trimmedFormData.brandId || !trimmedFormData.fullName || !trimmedFormData.professionalEmail || !trimmedFormData.password || !trimmedFormData.publicProfileLink) {
         throw new Error('Brand, full name, email, password, and LinkedIn profile link are required');
       }
 
-      // Combine uploaded file URLs
       const documentUrls = uploadedFiles.map(f => f.url).join(',');
       const verificationDocuments = documentUrls || trimmedFormData.verificationDocuments;
 
-      // Call brand-user edge function to create user and send verification email
       const { data, error: functionError } = await supabase.functions.invoke('brand-user', {
         body: {
-          action: 'signup',
+          action: 'claim',
           email: trimmedFormData.professionalEmail,
-          password: trimmedFormData.password,
           fullName: trimmedFormData.fullName,
           brandId: trimmedFormData.brandId,
           companyId: trimmedFormData.companyId,
@@ -126,8 +125,7 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
 
       if (functionError) throw functionError;
 
-      setVerificationEmail(formData.professionalEmail);
-      setShowEmailVerification(true);
+      setShowSuccessDialog(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit brand claim';
       setError(errorMessage);
@@ -160,13 +158,29 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
 
   const passwordStrength = getPasswordStrength();
 
-  if (showEmailVerification) {
+  if (showSuccessDialog) {
     return (
-      <EmailVerification
-        email={verificationEmail}
-        onBack={() => setShowEmailVerification(false)}
-        onResendSuccess={() => alert('Verification email sent to your professional email!')}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-8">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <CheckCircle className="h-16 w-16 text-green-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Thank You!</h2>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Thank you for claiming your brand access. Allow us between 24 to 72 hours to verify your claim and approve your access. You will be notified by email.
+              </p>
+              <Button 
+                onClick={onSuccess}
+                className="w-full mt-6"
+              >
+                Back to Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -308,7 +322,7 @@ const BrandClaimForm: React.FC<BrandClaimFormProps> = ({ onBack, onSuccess }) =>
                   type="url"
                   value={formData.publicProfileLink}
                   onChange={(e) => setFormData({...formData, publicProfileLink: e.target.value})}
-                  placeholder="https://linkedin.com/in/yourprofile"
+                  placeholder="linkedin.com/company/yourcompany"
                   required
                 />
               </div>
